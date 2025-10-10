@@ -1,0 +1,110 @@
+#Numero1 letra a e b
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.impute import SimpleImputer
+import matplotlib.pyplot as plt
+
+# --- Todo o código de preparação dos dados ---
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/communities/communities.data"
+nomes_colunas = [
+    'estado', 'condado', 'comunidade', 'nome_comunidade', 'fold', 'populacao', 'tamanho_medio_domicilio', 
+    'percentual_raca_negra', 'percentual_raca_branca', 'percentual_raca_asiatica', 'percentual_hispanicos', 
+    'percentual_idade_12a21', 'percentual_idade_12a29', 'percentual_idade_16a24', 'percentual_idade_65mais', 
+    'numero_populacao_urbana', 'percentual_populacao_urbana', 'renda_mediana', 'percentual_com_salario', 
+    'percentual_autonomo_agricola', 'percentual_com_renda_investimento', 'percentual_com_renda_seguridade_social', 
+    'percentual_com_assistencia_publica', 'percentual_com_aposentadoria', 'renda_familiar_mediana', 
+    'renda_per_capita', 'renda_per_capita_brancos', 'renda_per_capita_negros', 'renda_per_capita_indigenas', 
+    'renda_per_capita_asiaticos', 'outra_renda_per_capita', 'renda_per_capita_hispanicos', 
+    'numero_abaixo_linha_pobreza', 'percentual_populacao_abaixo_pobreza', 'percentual_menos_9serie', 
+    'percentual_sem_ensino_medio', 'percentual_com_ensino_superior', 'percentual_desempregados', 
+    'percentual_empregados', 'percentual_empregados_industria', 'percentual_empregados_servicos_profissionais', 
+    'percentual_ocupacao_industrial', 'percentual_ocupacao_gestao_profissional', 'percentual_homens_divorciados', 
+    'percentual_homens_nunca_casados', 'percentual_mulheres_divorciadas', 'percentual_total_divorciados', 
+    'pessoas_por_familia', 'percentual_familias_biparentais', 'percentual_criancas_familia_biparental', 
+    'percentual_criancas_pequenas_familia_biparental', 'percentual_adolescentes_familia_biparental', 
+    'percentual_maes_com_filhos_pequenos_trabalham', 'percentual_maes_que_trabalham', 
+    'numero_nascimentos_pais_nao_casados', 'percentual_nascimentos_pais_nao_casados', 'numero_imigrantes', 
+    'percentual_imigracao_recente', 'percentual_imigracao_ultimos_5_anos', 'percentual_imigracao_ultimos_8_anos', 
+    'percentual_imigracao_ultimos_10_anos', 'percentual_imigrantes_recentes_do_total', 
+    'percentual_imigrantes_recentes_5_anos_do_total', 'percentual_imigrantes_recentes_8_anos_do_total', 
+    'percentual_imigrantes_recentes_10_anos_do_total', 'percentual_fala_apenas_ingles', 
+    'percentual_nao_fala_ingles_bem', 'percentual_familias_grandes', 'percentual_domicilios_grandes_ocupados', 
+    'pessoas_por_domicilio_ocupado', 'pessoas_por_domicilio_proprio_ocupado', 'pessoas_por_domicilio_alugado_ocupado', 
+    'percentual_pessoas_domicilio_proprio', 'percentual_pessoas_domicilios_densos', 
+    'percentual_casas_menos_3_quartos', 'mediana_numero_quartos', 'domicilios_vagos', 
+    'percentual_domicilios_ocupados', 'percentual_domicilios_proprios_ocupados', 
+    'percentual_vagos_fechados_com_tapumes', 'percentual_vagos_ha_mais_6_meses', 'mediana_ano_construcao_domicilio', 
+    'percentual_domicilios_sem_telefone', 'percentual_sem_encanamento_completo', 'valor_baixo_quartil_domicilio_proprio', 
+    'valor_mediano_domicilio_proprio', 'valor_alto_quartil_domicilio_proprio', 'aluguel_baixo_quartil', 
+    'aluguel_mediano', 'aluguel_alto_quartil', 'aluguel_mediana', 'mediana_aluguel_como_percentual_renda', 
+    'mediana_custo_propriedade_como_percentual_renda', 'mediana_custo_propriedade_sem_hipoteca_percentual_renda', 
+    'numero_em_abrigos', 'numero_moradores_rua', 'percentual_nascidos_exterior', 'percentual_nascidos_mesmo_estado', 
+    'percentual_mesma_casa_desde_1985', 'percentual_mesma_cidade_desde_1985', 'percentual_mesmo_estado_desde_1985', 
+    'lemas_policiais_juramentados_tempo_integral', 'lemas_policiais_juramentados_tempo_integral_per_capita', 
+    'lemas_policiais_operacionais_tempo_integral', 'lemas_policiais_operacionais_tempo_integral_per_capita', 
+    'lemas_total_requisitos', 'lemas_total_requisitos_per_capita', 'requisitos_policiais_por_oficial', 
+    'policiais_per_capita', 'correspondencia_racial_comunidade_policia', 'percentual_policiais_brancos', 
+    'percentual_policiais_negros', 'percentual_policiais_hispanicos', 'percentual_policiais_asiaticos', 
+    'percentual_policiais_minorias', 'oficiais_designados_unidades_drogas', 'percentual_oficiais_designados_unidades_drogas', 
+    'orcamento_policial_per_capita', 'crimes_violentos_per_capita'
+]
+
+try:
+    df = pd.read_csv(url, header=None, names=nomes_colunas, na_values='?')
+    df = df.drop(columns=['estado', 'condado', 'comunidade', 'nome_comunidade', 'fold'])
+    df = df.drop(columns=['outra_renda_per_capita'])
+
+    X = df.drop('crimes_violentos_per_capita', axis=1)
+    y = df['crimes_violentos_per_capita']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    imputer = SimpleImputer(strategy='mean')
+    X_train = imputer.fit_transform(X_train)
+    X_test = imputer.transform(X_test)
+
+    modelo = LinearRegression()
+    modelo.fit(X_train, y_train)
+    y_pred_teste = modelo.predict(X_test)
+
+
+    # --- Seção de Geração do Gráfico ---
+
+    print("Gerando gráfico da Regressao Linear")
+    plt.style.use('seaborn-v0_8-whitegrid')
+    fig, ax = plt.subplots(figsize=(8, 8))
+    
+    ax.scatter(y_test, y_pred_teste, alpha=0.6, edgecolor='k', s=80)
+    
+    lims = [
+        np.min([ax.get_xlim(), ax.get_ylim()]),
+        np.max([ax.get_xlim(), ax.get_ylim()]),
+    ]
+    ax.plot(lims, lims, 'r--', alpha=0.75, zorder=0, label='Previsão Perfeita')
+    
+    ax.set_title('Gráfico de Regressão: Valores Reais vs. Previstos', fontsize=16)
+    ax.set_xlabel('Valores Reais (Taxa de Crimes)', fontsize=12)
+    ax.set_ylabel('Valores Previstos pelo Modelo', fontsize=12)
+    ax.legend()
+    ax.set_aspect('equal', 'box')
+    
+    plt.tight_layout()
+    plt.savefig('grafico_regressao.png')
+    
+    print("Gráfico 'grafico_regressao.png' foi gerado com sucesso em sua pasta local.")
+
+except Exception as e:
+    print(f"Ocorreu um erro: {e}")
+    print("Por favor, verifique sua conexão ou a disponibilidade do link do dataset.")
+
+
+
+rmse_teste = np.sqrt(mean_squared_error(y_test, y_pred_teste))
+mae_teste = mean_absolute_error(y_test, y_pred_teste)
+
+print("--- Avaliação da Regressão Linear no Conjunto de Teste ---")
+print(f"Raiz do Erro Quadrático Médio (RMSE): {rmse_teste:.4f}")
+print(f"Erro Médio Absoluto (MAE): {mae_teste:.4f}")
