@@ -1,0 +1,69 @@
+# Importação das Bibliotecas
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OrdinalEncoder
+from sklearn.tree import DecisionTreeClassifier, plot_tree, export_text
+from sklearn.metrics import accuracy_score
+
+# Carregamento e Preparação dos Dados
+# URL do conjunto de dados Nursery no repositório da UCI
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/nursery/nursery.data"
+
+# Nomes das colunas
+nomes_colunas = [
+    'pais', 'condicoes_bercario', 'formato_familia', 'criancas',
+    'moradia', 'situacao_financeira', 'condicoes_sociais', 'saude', 'classe'
+]
+
+# Carrega os dados em um DataFrame do pandas
+dados = pd.read_csv(url, header=None, names=nomes_colunas)
+
+# Separa as características/features (X) da variável alvo (y)
+X = dados.drop('classe', axis=1)
+y = dados['classe']
+
+# Codificação das Variáveis Categóricas
+# O DecisionTreeClassifier do scikit-learn requer que as entradas sejam numéricas.
+# Usamos o OrdinalEncoder para converter cada categoria de texto em um número inteiro.
+codificador = OrdinalEncoder()
+X_codificado = codificador.fit_transform(X)
+
+# Divisão dos Dados em Treinamento e Teste
+# Seleciona 10000 amostras para treinamento e o restante para teste
+# random_state=42 garante que a divisão seja sempre a mesma, para reprodutibilidade
+X_treino, X_teste, y_treino, y_teste = train_test_split(
+    X_codificado, y, train_size=10000, random_state=42
+)
+
+print(f"Tamanho do conjunto de treinamento: {len(X_treino)} amostras")
+print(f"Tamanho do conjunto de teste: {len(X_teste)} amostras")
+print("-" * 30)
+
+# Construção e Treinamento da Árvore de Decisão
+# criterion='entropy' -> Usa o Ganho de Informação como medida
+# max_depth=2 -> Limita a árvore a dois níveis de nós de decisão
+classificador = DecisionTreeClassifier(criterion='entropy', max_depth=2, random_state=42)
+classificador.fit(X_treino, y_treino)
+
+
+# a. Estrutura da Árvore Construída
+print("\n--- a. Estrutura da Árvore de Decisão ---\n")
+plt.figure(figsize=(20, 10))
+plot_tree(
+    classificador,
+    feature_names=nomes_colunas[:-1],
+    class_names=classificador.classes_,
+    filled=True,
+    rounded=True
+)
+plt.title("Árvore de Decisão (Profundidade 2)", fontsize=16)
+plt.show()
+
+# b. Acurácia do Modelo
+print("\n--- b. Acurácia no Conjunto de Teste ---\n")
+# Usa o modelo treinado para prever os resultados do conjunto de teste
+y_predicao = classificador.predict(X_teste)
+# Calcula a acurácia comparando as previsões com os valores reais
+acuracia = accuracy_score(y_teste, y_predicao)
+print(f"A acurácia obtida no conjunto de teste foi: {acuracia:.4f} ({acuracia:.2%})")
