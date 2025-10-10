@@ -1,0 +1,118 @@
+#Adicionando as bibliotecas
+
+!pip install ucimlrepo -q
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, recall_score, precision_score
+from sklearn.preprocessing import StandardScaler
+from ucimlrepo import fetch_ucirepo
+import time
+
+try:
+    # Buscar o dataset HTRU2 pelo seu ID no repositório UCI
+    dados_htru2 = fetch_ucirepo(id=372)
+
+    # Obter features (X, atributos) e rótulos (y, alvo)
+    X = dados_htru2.data.features
+    y = dados_htru2.data.targets.iloc[:, 0] # Garante que y seja uma Series
+
+    print(f"Número total de amostras: {len(X)}")
+    print("\nDistribuição das classes (0 = Não-Pulsar, 1 = Pulsar):")
+    print(y.value_counts(normalize=True))
+
+except Exception as e:
+    print(f"\nFalha ao carregar o dataset. Erro: {e}")
+    print("Verifique sua conexão com a internet.")
+    # Encerra a execução se os dados não puderem ser carregados
+    exit()
+
+# Parâmetros do experimento
+NUM_EXECUCOES = 5
+AMOSTRAS_TREINO = 6000
+VALORES_K_PARA_TESTAR = [3, 5, 7, 9, 11] # 5 valores de k para validar
+
+# Lista para armazenar os resultados de cada execução
+lista_resultados = []
+
+print(f"\nIniciando {NUM_EXECUCOES} execuções do experimento de validação holdout...")
+print("=" * 70)
+
+for i in range(NUM_EXECUCOES):
+    print(f"--- Execução {i+1}/{NUM_EXECUCOES} ---")
+
+    # Dividisao do dataset em treino e teste
+    X_treino, X_teste, y_treino, y_teste = train_test_split(
+        X, y, train_size=AMOSTRAS_TREINO, stratify=y, random_state=i
+    )
+
+    # Normalização dos dados
+    normalizador = StandardScaler()
+    X_treino_normalizado = normalizador.fit_transform(X_treino)
+    X_teste_normalizado = normalizador.transform(X_teste)
+
+    # Seleção do melhor k: Dividir a base de treino em duas partes iguais
+    X_treino_k, X_validacao_k, y_treino_k, y_validacao_k = train_test_split(
+        X_treino_normalizado, y_treino, test_size=0.5, stratify=y_treino, random_state=i
+    )
+
+    melhor_k = -1
+    melhor_acuracia_validacao = -1
+
+    # Validar cada valor de k no conjunto de validação
+    for k in VALORES_K_PARA_TESTAR:
+        knn_validador = KNeighborsClassifier(n_neighbors=k, metric='euclidean')
+        knn_validador.fit(X_treino_k, y_treino_k)
+        y_pred_validacao = knn_validador.predict(X_validacao_k)
+        acuracia_atual = accuracy_score(y_validacao_k, y_pred_validacao)
+
+        if acuracia_atual > melhor_acuracia_validacao:
+            melhor_acuracia_validacao = acuracia_atual
+            melhor_k = k
+
+    print(f"Melhor k encontrado na validação: {melhor_k} (com acurácia de {melhor_acuracia_validacao:.4f})")
+
+    # Treinar o modelo final com o melhor k na base de treino completa
+    knn_final = KNeighborsClassifier(n_neighbors=melhor_k, metric='euclidean')
+
+    tempo_inicio = time.time()
+    knn_final.fit(X_treino_normalizado, y_treino)
+    y_pred_teste = knn_final.predict(X_teste_normalizado)
+    tempo_fim = time.time()
+
+    # Calcular métricas e tempo de execução no conjunto de teste
+    tempo_execucao = tempo_fim - tempo_inicio
+    acuracia = accuracy_score(y_teste, y_pred_teste)
+    recall = recall_score(y_teste, y_pred_teste)
+    precisao = precision_score(y_teste, y_pred_teste)
+
+    # Armazenar resultados da execução atual
+    lista_resultados.append({
+        'Execucao': i + 1,
+        'Melhor k': melhor_k,
+        'Acuracia': acuracia,
+        'Recall': recall,
+        'Precisao': precisao,
+        'Tempo de Execucao (s)': tempo_execucao
+    })
+    print(f"Resultados no teste: Acurácia={acuracia:.4f}, Recall={recall:.4f}, Precisão={precisao:.4f}\n")
+
+print("=" * 70)
+print("Experimento finalizado. Processando resultados...")
+print("=" * 70)
+
+# Criar um DataFrame com os resultados e calcular as médias
+df_resultados = pd.DataFrame(lista_resultados)
+resultados_medios = df_resultados.groupby('Melhor k').agg(
+    Vezes_Escolhido=('Execucao', 'count'),
+    Acuracia_Media=('Acuracia', 'mean'),
+    Recall_Medio=('Recall', 'mean'),
+    Precisao_Media=('Precisao', 'mean'),
+    Tempo_Medio_Execucao=('Tempo de Execucao (s)', 'mean')
+).reset_index()
+
+print("\n--- Tabela de Resultados Médios Agrupados pelo Melhor k ---\n")
+# O método .to_string() formata o DataFrame para uma boa visualização no print
+print(resultados_medios.round(4).to_string(index=False))
